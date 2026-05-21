@@ -45,7 +45,7 @@ const VISIT_COLORS = {
 
 // 每個人專屬主色（深色背景 + 白字）
 const PERSON_THEMES = [
-  { bg: "bg-orange-500",  text: "text-white", dot: "bg-orange-500",  name: "text-orange-600", card: "border-l-orange-500"  },
+  { bg: "bg-indigo-600",  text: "text-white", dot: "bg-indigo-600",  name: "text-indigo-600", card: "border-l-indigo-600"  },
   { bg: "bg-sky-600",     text: "text-white", dot: "bg-sky-600",     name: "text-sky-600",    card: "border-l-sky-600"     },
   { bg: "bg-emerald-600", text: "text-white", dot: "bg-emerald-600", name: "text-emerald-600",card: "border-l-emerald-600" },
   { bg: "bg-violet-600",  text: "text-white", dot: "bg-violet-600",  name: "text-violet-600", card: "border-l-violet-600"  },
