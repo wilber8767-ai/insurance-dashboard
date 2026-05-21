@@ -12,15 +12,22 @@ function getWeekRange(date = new Date()) {
   mon.setDate(d.getDate() - ((day + 6) % 7));
   const sun = new Date(mon);
   sun.setDate(mon.getDate() + 6);
-  return { start: fmtDate(mon), end: fmtDate(sun) };
+  return { start: localDate(mon), end: localDate(sun) };
 }
 
 function getMonthRange(date = new Date()) {
   const y = date.getFullYear(), m = date.getMonth();
-  return { start: fmtDate(new Date(y, m, 1)), end: fmtDate(new Date(y, m + 1, 0)) };
+  return { start: localDate(new Date(y, m, 1)), end: localDate(new Date(y, m + 1, 0)) };
 }
 
-function fmtDate(d) { return d.toISOString().split("T")[0]; }
+// 用本地時間格式化，避免 UTC 時區偏移問題
+function localDate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 function fmtMoney(n) { return Number(n || 0).toLocaleString("zh-TW"); }
 function getDaysInMonth(year, month) { return new Date(year, month + 1, 0).getDate(); }
 
@@ -122,21 +129,20 @@ function SectionTitle({ icon, title }) {
   );
 }
 
-// ── 共用行事曆 ──────────────────────────────────────────────
 function TeamCalendar({ currentUser, allProfiles, onToast }) {
   const today = new Date();
   const [calYear, setCalYear] = useState(today.getFullYear());
   const [calMonth, setCalMonth] = useState(today.getMonth());
   const [activities, setActivities] = useState([]);
   const [modalDate, setModalDate] = useState(null);
-  const [editingEntry, setEditingEntry] = useState(null); // 正在編輯的項目
-  const [confirmDelete, setConfirmDelete] = useState(null); // 要刪除的項目
+  const [editingEntry, setEditingEntry] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
   const [aForm, setAForm] = useState({ client_name: "", visit_type: "親訪", topic: "" });
   const [aSaving, setASaving] = useState(false);
 
   const loadActivities = useCallback(async () => {
-    const start = fmtDate(new Date(calYear, calMonth, 1));
-    const end = fmtDate(new Date(calYear, calMonth + 1, 0));
+    const start = localDate(new Date(calYear, calMonth, 1));
+    const end = localDate(new Date(calYear, calMonth + 1, 0));
     const { data } = await supabase.from("activities").select("*").gte("date", start).lte("date", end).order("date");
     setActivities(data || []);
   }, [calYear, calMonth]);
@@ -153,7 +159,6 @@ function TeamCalendar({ currentUser, allProfiles, onToast }) {
     return allProfiles.find(p => p.id === userId)?.name || "—";
   }
 
-  // 新增
   async function handleAddActivity() {
     if (!aForm.client_name.trim()) { onToast("請填寫客戶姓名", "error"); return; }
     if (!aForm.topic.trim()) { onToast("請填寫議題", "error"); return; }
@@ -169,12 +174,10 @@ function TeamCalendar({ currentUser, allProfiles, onToast }) {
     loadActivities();
   }
 
-  // 開始編輯
   function startEdit(entry) {
     setEditingEntry({ ...entry, topic: entry.notes || "" });
   }
 
-  // 儲存編輯
   async function handleSaveEdit() {
     if (!editingEntry.client_name.trim()) { onToast("請填寫客戶姓名", "error"); return; }
     if (!editingEntry.topic.trim()) { onToast("請填寫議題", "error"); return; }
@@ -191,7 +194,6 @@ function TeamCalendar({ currentUser, allProfiles, onToast }) {
     loadActivities();
   }
 
-  // 確認刪除
   async function handleDelete() {
     const { error } = await supabase.from("activities").delete().eq("id", confirmDelete.id);
     if (error) { onToast("刪除失敗：" + error.message, "error"); }
@@ -207,7 +209,6 @@ function TeamCalendar({ currentUser, allProfiles, onToast }) {
   return (
     <>
       <div className="bg-white border border-stone-200 rounded-3xl overflow-hidden shadow-sm">
-        {/* 月份導航 */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-stone-100 bg-amber-50/50">
           <button onClick={() => { if(calMonth===0){setCalMonth(11);setCalYear(y=>y-1);}else setCalMonth(m=>m-1);}}
             className="w-9 h-9 flex items-center justify-center rounded-xl text-stone-400 hover:bg-amber-100 hover:text-stone-700 transition">
@@ -220,7 +221,6 @@ function TeamCalendar({ currentUser, allProfiles, onToast }) {
           </button>
         </div>
 
-        {/* 日曆格 */}
         <div className="p-4">
           <div className="grid grid-cols-7 mb-2">
             {weeks.map(w => <div key={w} className="text-center text-sm font-semibold text-stone-400 py-1">{w}</div>)}
@@ -231,7 +231,7 @@ function TeamCalendar({ currentUser, allProfiles, onToast }) {
               const day = i + 1;
               const dateStr = `${calYear}-${String(calMonth+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
               const entries = actByDate[dateStr] || [];
-              const isToday = fmtDate(today) === dateStr;
+              const isToday = localDate(today) === dateStr;
               return (
                 <button key={day} onClick={() => setModalDate(dateStr)}
                   className={`min-h-[80px] rounded-2xl p-1.5 text-left border transition-all hover:border-amber-300 hover:bg-amber-50 ${isToday ? "border-amber-400 bg-amber-50" : "border-stone-100 bg-stone-50/50"}`}>
@@ -253,7 +253,6 @@ function TeamCalendar({ currentUser, allProfiles, onToast }) {
           </div>
         </div>
 
-        {/* 圖例 */}
         <div className="px-6 pb-4 flex gap-4 flex-wrap border-t border-stone-100 pt-3">
           {VISIT_TYPES.map(t => {
             const c = VISIT_COLORS[t];
@@ -262,11 +261,9 @@ function TeamCalendar({ currentUser, allProfiles, onToast }) {
         </div>
       </div>
 
-      {/* 日期 Modal */}
       {modalDate && (
         <Modal title={`${modalDate} 的行程`} onClose={() => { setModalDate(null); setEditingEntry(null); setAForm({ client_name: "", visit_type: "親訪", topic: "" }); }}>
           <div className="space-y-4">
-            {/* 當日行程列表 */}
             {(actByDate[modalDate]||[]).length > 0 && (
               <div className="space-y-2">
                 <p className="text-sm text-stone-400 font-semibold uppercase tracking-widest">當日行程</p>
@@ -275,67 +272,49 @@ function TeamCalendar({ currentUser, allProfiles, onToast }) {
                   const name = getAgentName(e.user_id);
                   const isMe = e.user_id === currentUser.id;
                   const isEditing = editingEntry?.id === e.id;
-
                   return (
                     <div key={e.id} className={`${c.card} border rounded-2xl px-4 py-3`}>
                       {isEditing ? (
-                        /* 編輯模式 */
                         <div className="space-y-3">
                           <Field label="客戶姓名">
-                            <input type="text" value={editingEntry.client_name}
-                              onChange={ev => setEditingEntry(p=>({...p,client_name:ev.target.value}))}
-                              className={inputCls()} />
+                            <input type="text" value={editingEntry.client_name} onChange={ev => setEditingEntry(p=>({...p,client_name:ev.target.value}))} className={inputCls()} />
                           </Field>
                           <Field label="拜訪類型">
-                            <select value={editingEntry.visit_type}
-                              onChange={ev => setEditingEntry(p=>({...p,visit_type:ev.target.value}))}
-                              className={inputCls()}>
+                            <select value={editingEntry.visit_type} onChange={ev => setEditingEntry(p=>({...p,visit_type:ev.target.value}))} className={inputCls()}>
                               {VISIT_TYPES.map(t => <option key={t}>{t}</option>)}
                             </select>
                           </Field>
                           <Field label="議題">
-                            <input type="text" value={editingEntry.topic}
-                              onChange={ev => setEditingEntry(p=>({...p,topic:ev.target.value}))}
-                              className={inputCls()} />
+                            <input type="text" value={editingEntry.topic} onChange={ev => setEditingEntry(p=>({...p,topic:ev.target.value}))} className={inputCls()} />
                           </Field>
                           <div className="flex gap-2">
-                            <button onClick={() => setEditingEntry(null)}
-                              className="flex-1 py-2 rounded-xl bg-stone-100 text-stone-600 font-semibold text-sm hover:bg-stone-200 transition">
-                              取消
-                            </button>
-                            <button onClick={handleSaveEdit} disabled={aSaving}
-                              className="flex-1 py-2 rounded-xl bg-amber-400 text-white font-semibold text-sm hover:bg-amber-300 transition disabled:opacity-50">
+                            <button onClick={() => setEditingEntry(null)} className="flex-1 py-2 rounded-xl bg-stone-100 text-stone-600 font-semibold text-sm hover:bg-stone-200 transition">取消</button>
+                            <button onClick={handleSaveEdit} disabled={aSaving} className="flex-1 py-2 rounded-xl bg-amber-400 text-white font-semibold text-sm hover:bg-amber-300 transition disabled:opacity-50">
                               {aSaving ? <span className="flex items-center justify-center gap-1"><Spinner />儲存中</span> : "儲存"}
                             </button>
                           </div>
                         </div>
                       ) : (
-                        /* 顯示模式 */
-                        <div>
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className={`w-2 h-2 rounded-full ${c.dot}`} />
-                                <span className={`text-sm font-bold ${c.text}`}>{name}{isMe ? "（我）" : ""}</span>
-                                <span className={`text-xs ${c.text} opacity-60`}>{e.visit_type}</span>
-                              </div>
-                              <p className="text-base text-stone-700 font-semibold pl-4">{e.client_name}</p>
-                              {e.notes && <p className="text-sm text-stone-500 pl-4 mt-0.5">議題：{e.notes}</p>}
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className={`w-2 h-2 rounded-full ${c.dot}`} />
+                              <span className={`text-sm font-bold ${c.text}`}>{name}{isMe ? "（我）" : ""}</span>
+                              <span className={`text-xs ${c.text} opacity-60`}>{e.visit_type}</span>
                             </div>
-                            {/* 只有自己的資料才能編輯/刪除 */}
-                            {isMe && (
-                              <div className="flex gap-1 ml-2 flex-shrink-0">
-                                <button onClick={() => startEdit(e)}
-                                  className="w-8 h-8 flex items-center justify-center rounded-xl bg-white/70 text-stone-400 hover:text-amber-600 hover:bg-amber-50 transition border border-stone-200">
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                                </button>
-                                <button onClick={() => setConfirmDelete(e)}
-                                  className="w-8 h-8 flex items-center justify-center rounded-xl bg-white/70 text-stone-400 hover:text-red-500 hover:bg-red-50 transition border border-stone-200">
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                                </button>
-                              </div>
-                            )}
+                            <p className="text-base text-stone-700 font-semibold pl-4">{e.client_name}</p>
+                            {e.notes && <p className="text-sm text-stone-500 pl-4 mt-0.5">議題：{e.notes}</p>}
                           </div>
+                          {isMe && (
+                            <div className="flex gap-1 ml-2 flex-shrink-0">
+                              <button onClick={() => startEdit(e)} className="w-8 h-8 flex items-center justify-center rounded-xl bg-white/70 text-stone-400 hover:text-amber-600 hover:bg-amber-50 transition border border-stone-200">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                              </button>
+                              <button onClick={() => setConfirmDelete(e)} className="w-8 h-8 flex items-center justify-center rounded-xl bg-white/70 text-stone-400 hover:text-red-500 hover:bg-red-50 transition border border-stone-200">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                              </button>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -344,22 +323,15 @@ function TeamCalendar({ currentUser, allProfiles, onToast }) {
               </div>
             )}
 
-            {/* 新增區塊 */}
             <div className="border-t border-stone-200 pt-4 space-y-3">
               <p className="text-sm text-stone-400 font-semibold uppercase tracking-widest">新增我的拜訪</p>
-              <Field label="客戶姓名 *">
-                <input type="text" value={aForm.client_name} onChange={e => setAForm(p=>({...p,client_name:e.target.value}))}
-                  placeholder="王小明" className={inputCls()} />
-              </Field>
+              <Field label="客戶姓名 *"><input type="text" value={aForm.client_name} onChange={e => setAForm(p=>({...p,client_name:e.target.value}))} placeholder="王小明" className={inputCls()} /></Field>
               <Field label="拜訪類型">
                 <select value={aForm.visit_type} onChange={e => setAForm(p=>({...p,visit_type:e.target.value}))} className={inputCls()}>
                   {VISIT_TYPES.map(t => <option key={t}>{t}</option>)}
                 </select>
               </Field>
-              <Field label="議題 *">
-                <input type="text" value={aForm.topic} onChange={e => setAForm(p=>({...p,topic:e.target.value}))}
-                  placeholder="例：壽險規劃、醫療保障檢視..." className={inputCls()} />
-              </Field>
+              <Field label="議題 *"><input type="text" value={aForm.topic} onChange={e => setAForm(p=>({...p,topic:e.target.value}))} placeholder="例：壽險規劃、醫療保障檢視..." className={inputCls()} /></Field>
               <button onClick={handleAddActivity} disabled={aSaving}
                 className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-300 hover:to-orange-300 text-white font-semibold text-sm transition-all shadow-md disabled:opacity-50">
                 {aSaving ? <span className="flex items-center justify-center gap-2"><Spinner />儲存中...</span> : "確認新增"}
@@ -369,7 +341,6 @@ function TeamCalendar({ currentUser, allProfiles, onToast }) {
         </Modal>
       )}
 
-      {/* 刪除確認對話框 */}
       {confirmDelete && (
         <ConfirmDialog
           message={`確定要刪除「${confirmDelete.client_name}」的拜訪紀錄嗎？`}
@@ -381,11 +352,9 @@ function TeamCalendar({ currentUser, allProfiles, onToast }) {
   );
 }
 
-// ── 業務員視窗 ──────────────────────────────────────────────
-function AgentView({ user, allProfiles, onToast }) {
+function SalesForm({ user, onToast }) {
   const today = new Date();
-  const [activeTab, setActiveTab] = useState("calendar");
-  const [sForm, setSForm] = useState({ date: fmtDate(today), client_name: "", product_name: "", accepted_amount: "", confirmed_amount: "" });
+  const [sForm, setSForm] = useState({ date: localDate(today), client_name: "", product_name: "", accepted_amount: "", confirmed_amount: "" });
   const [sSaving, setSSaving] = useState(false);
 
   async function handleAddSale(e) {
@@ -402,70 +371,7 @@ function AgentView({ user, allProfiles, onToast }) {
     setSSaving(false);
     if (error) { onToast("送出失敗：" + error.message, "error"); return; }
     onToast("✓ 業績紀錄已送出");
-    setSForm({ date: fmtDate(today), client_name: "", product_name: "", accepted_amount: "", confirmed_amount: "" });
-  }
-
-  return (
-    <div className="space-y-5">
-      <div className="flex gap-2 bg-stone-100 rounded-2xl p-1">
-        {[{id:"calendar",label:"📅 團隊行事曆"},{id:"sales",label:"💰 業績回報"}].map(t => (
-          <button key={t.id} onClick={() => setActiveTab(t.id)}
-            className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${activeTab===t.id ? "bg-white text-stone-800 shadow-sm" : "text-stone-400 hover:text-stone-600"}`}>
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {activeTab === "calendar" && <TeamCalendar currentUser={user} allProfiles={allProfiles} onToast={onToast} />}
-
-      {activeTab === "sales" && (
-        <div className="bg-white border border-stone-200 rounded-3xl p-6 shadow-sm">
-          <h2 className="font-bold text-stone-700 mb-5 flex items-center gap-2">
-            <span className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl flex items-center justify-center text-sm">💰</span>
-            業績回報表單
-          </h2>
-          <form onSubmit={handleAddSale} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <Field label="日期 *"><input type="date" value={sForm.date} onChange={e => setSForm(p=>({...p,date:e.target.value}))} className={inputCls()} required /></Field>
-              <Field label="客戶姓名 *"><input type="text" value={sForm.client_name} onChange={e => setSForm(p=>({...p,client_name:e.target.value}))} placeholder="王小明" className={inputCls()} /></Field>
-            </div>
-            <Field label="險種 / 備註"><input type="text" value={sForm.product_name} onChange={e => setSForm(p=>({...p,product_name:e.target.value}))} placeholder="終身壽險、醫療險..." className={inputCls()} /></Field>
-            <div className="grid grid-cols-2 gap-4">
-              <Field label="受理業績 (元)"><input type="number" value={sForm.accepted_amount} onChange={e => setSForm(p=>({...p,accepted_amount:e.target.value}))} placeholder="0" min="0" className={inputCls()} /></Field>
-              <Field label="核實業績 (元)"><input type="number" value={sForm.confirmed_amount} onChange={e => setSForm(p=>({...p,confirmed_amount:e.target.value}))} placeholder="0" min="0" className={inputCls()} /></Field>
-            </div>
-            <button type="submit" disabled={sSaving}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-400 to-teal-500 text-white font-semibold text-sm transition-all shadow-md disabled:opacity-50">
-              {sSaving ? <span className="flex items-center justify-center gap-2"><Spinner />送出中...</span> : "送出業績紀錄"}
-            </button>
-          </form>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── 主管業績表單 ─────────────────────────────────────────────
-function ManagerSalesForm({ user, onToast }) {
-  const today = new Date();
-  const [sForm, setSForm] = useState({ date: fmtDate(today), client_name: "", product_name: "", accepted_amount: "", confirmed_amount: "" });
-  const [sSaving, setSSaving] = useState(false);
-
-  async function handleAddSale(e) {
-    e.preventDefault();
-    if (!sForm.date || !sForm.client_name.trim()) { onToast("請填寫日期與客戶名稱", "error"); return; }
-    if (sForm.accepted_amount === "" && sForm.confirmed_amount === "") { onToast("請填寫至少一筆業績金額", "error"); return; }
-    setSSaving(true);
-    const { error } = await supabase.from("sales").insert({
-      user_id: user.id, date: sForm.date, client_name: sForm.client_name,
-      product_name: sForm.product_name,
-      accepted_amount: Number(sForm.accepted_amount) || 0,
-      confirmed_amount: Number(sForm.confirmed_amount) || 0,
-    });
-    setSSaving(false);
-    if (error) { onToast("送出失敗：" + error.message, "error"); return; }
-    onToast("✓ 業績紀錄已送出");
-    setSForm({ date: fmtDate(today), client_name: "", product_name: "", accepted_amount: "", confirmed_amount: "" });
+    setSForm({ date: localDate(today), client_name: "", product_name: "", accepted_amount: "", confirmed_amount: "" });
   }
 
   return (
@@ -487,7 +393,32 @@ function ManagerSalesForm({ user, onToast }) {
   );
 }
 
-// ── 主管視窗 ────────────────────────────────────────────────
+function AgentView({ user, allProfiles, onToast }) {
+  const [activeTab, setActiveTab] = useState("calendar");
+  return (
+    <div className="space-y-5">
+      <div className="flex gap-2 bg-stone-100 rounded-2xl p-1">
+        {[{id:"calendar",label:"📅 團隊行事曆"},{id:"sales",label:"💰 業績回報"}].map(t => (
+          <button key={t.id} onClick={() => setActiveTab(t.id)}
+            className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${activeTab===t.id ? "bg-white text-stone-800 shadow-sm" : "text-stone-400 hover:text-stone-600"}`}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+      {activeTab === "calendar" && <TeamCalendar currentUser={user} allProfiles={allProfiles} onToast={onToast} />}
+      {activeTab === "sales" && (
+        <div className="bg-white border border-stone-200 rounded-3xl p-6 shadow-sm">
+          <h2 className="font-bold text-stone-700 mb-5 flex items-center gap-2">
+            <span className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl flex items-center justify-center text-sm">💰</span>
+            業績回報表單
+          </h2>
+          <SalesForm user={user} onToast={onToast} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ManagerView({ user, allProfiles, onToast }) {
   const [period, setPeriod] = useState("week");
   const [agentFilter, setAgentFilter] = useState("all");
@@ -533,7 +464,9 @@ function ManagerView({ user, allProfiles, onToast }) {
     return Object.entries(map);
   }, [activities, sales, allProfiles]);
 
-  const periodLabel = period === "week" ? `${range.start} ～ ${range.end}` : range.start.slice(0,7).replace("-","年") + "月";
+  const periodLabel = period === "week"
+    ? `${range.start} ～ ${range.end}`
+    : `${range.start.slice(0,4)}年${String(new Date(range.start).getMonth()+1)}月`;
 
   return (
     <div className="space-y-5">
@@ -653,14 +586,13 @@ function ManagerView({ user, allProfiles, onToast }) {
             <span className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl flex items-center justify-center text-sm">💰</span>
             業績回報表單
           </h2>
-          <ManagerSalesForm user={user} onToast={onToast} />
+          <SalesForm user={user} onToast={onToast} />
         </div>
       )}
     </div>
   );
 }
 
-// ── 登入頁 ──────────────────────────────────────────────────
 function AuthPage({ onLogin }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -715,7 +647,6 @@ function AuthPage({ onLogin }) {
   );
 }
 
-// ── App Root ────────────────────────────────────────────────
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [allProfiles, setAllProfiles] = useState([]);
