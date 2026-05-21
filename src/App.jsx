@@ -78,9 +78,9 @@ function StatCard({ label, value, sub, accent }) {
   const cls = accents[accent] || accents.sky;
   return (
     <div className={`${cls} border rounded-2xl p-5 shadow-sm`}>
-      <p className="text-xs font-semibold uppercase tracking-widest mb-2 opacity-60">{label}</p>
-      <p className="text-3xl font-bold">{value}</p>
-      {sub && <p className="text-xs mt-1 opacity-50">{sub}</p>}
+      <p className="text-base font-semibold uppercase tracking-widest mb-2 opacity-60">{label}</p>
+      <p className="text-4xl font-bold">{value}</p>
+      {sub && <p className="text-sm mt-1 opacity-60">{sub}</p>}
     </div>
   );
 }
@@ -88,14 +88,14 @@ function StatCard({ label, value, sub, accent }) {
 function Field({ label, children }) {
   return (
     <div>
-      <label className="block text-xs font-semibold text-stone-500 uppercase tracking-widest mb-1.5">{label}</label>
+      <label className="block text-sm font-semibold text-stone-500 uppercase tracking-widest mb-1.5">{label}</label>
       {children}
     </div>
   );
 }
 
 function inputCls() {
-  return "w-full bg-white border border-stone-200 text-stone-800 placeholder-stone-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent transition shadow-sm";
+  return "w-full bg-white border border-stone-200 text-stone-800 placeholder-stone-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent transition shadow-sm";
 }
 
 function SectionTitle({ icon, title }) {
@@ -390,7 +390,7 @@ function ManagerView({ user, allProfiles, onToast }) {
               ))}
             </div>
             <select value={agentFilter} onChange={e => setAgentFilter(e.target.value)}
-              className="bg-white border border-stone-200 text-stone-600 rounded-2xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 shadow-sm min-w-[140px]">
+              className="bg-white border border-stone-200 text-stone-600 rounded-2xl px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-amber-400 shadow-sm min-w-[140px]">
               <option value="all">全團隊綜合</option>
               {allProfiles.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
             </select>
@@ -568,7 +568,7 @@ function AuthPage({ onLogin }) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
           </div>
-          <h1 className="text-3xl font-bold text-stone-800 tracking-tight">業績管理系統</h1>
+          <h1 className="text-4xl font-bold text-stone-800 tracking-tight">業績管理系統</h1>
           <p className="text-stone-400 mt-1 text-sm">Insurance Sales Management V1</p>
         </div>
         <div className="bg-white/80 backdrop-blur border border-stone-200 rounded-3xl p-8 shadow-xl">
