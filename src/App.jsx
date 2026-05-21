@@ -30,26 +30,25 @@ function fmtMoney(n) { return Number(n || 0).toLocaleString("zh-TW"); }
 function getDaysInMonth(y, m) { return new Date(y, m + 1, 0).getDate(); }
 
 const VISIT_TYPES = ["親訪", "跨售訪", "議題訪"];
+
+const VISIT_ICON = {
+  "親訪":   "👁",
+  "跨售訪": "🤝",
+  "議題訪": "💡",
+};
+
 const VISIT_COLORS = {
   "親訪":   { bg: "bg-sky-100",    text: "text-sky-700",    dot: "bg-sky-400",    card: "bg-sky-50 border-sky-200"       },
   "跨售訪": { bg: "bg-violet-100", text: "text-violet-700", dot: "bg-violet-400", card: "bg-violet-50 border-violet-200" },
   "議題訪": { bg: "bg-amber-100",  text: "text-amber-700",  dot: "bg-amber-400",  card: "bg-amber-50 border-amber-200"   },
 };
 
-// 每個人的左側色條顏色（依 profiles 順序）
-const PERSON_BORDER_COLORS = [
-  "border-l-orange-500",
-  "border-l-teal-500",
-  "border-l-pink-500",
-  "border-l-indigo-500",
-];
-
-// 每個人的名字色（對應色條）
-const PERSON_NAME_COLORS = [
-  "text-orange-600",
-  "text-teal-600",
-  "text-pink-600",
-  "text-indigo-600",
+// 每個人專屬主色（深色背景 + 白字）
+const PERSON_THEMES = [
+  { bg: "bg-orange-500",  text: "text-white", dot: "bg-orange-500",  name: "text-orange-600", card: "border-l-orange-500"  },
+  { bg: "bg-sky-600",     text: "text-white", dot: "bg-sky-600",     name: "text-sky-600",    card: "border-l-sky-600"     },
+  { bg: "bg-emerald-600", text: "text-white", dot: "bg-emerald-600", name: "text-emerald-600",card: "border-l-emerald-600" },
+  { bg: "bg-violet-600",  text: "text-white", dot: "bg-violet-600",  name: "text-violet-600", card: "border-l-violet-600"  },
 ];
 
 const MONTH_NAMES = ["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"];
@@ -75,8 +74,8 @@ function Modal({ title, onClose, children }) {
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-stone-900/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-md bg-amber-50 border border-amber-200 rounded-3xl shadow-2xl overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-amber-200 bg-white/60">
+      <div className="relative w-full max-w-md bg-white border border-stone-200 rounded-3xl shadow-2xl overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-stone-100 bg-stone-50">
           <h2 className="font-bold text-stone-800 text-base">{title}</h2>
           <button onClick={onClose} className="text-stone-400 hover:text-stone-700 transition">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
@@ -171,22 +170,13 @@ function TeamCalendar({ currentUser, allProfiles, onToast }) {
     return map;
   }, [activities]);
 
-  function getPersonIndex(uid) {
-    return allProfiles.findIndex(p => p.id === uid);
+  function getPersonTheme(uid) {
+    const idx = allProfiles.findIndex(p => p.id === uid);
+    return PERSON_THEMES[idx % PERSON_THEMES.length] || PERSON_THEMES[0];
   }
 
   function getAgentName(uid) {
     return allProfiles.find(p => p.id === uid)?.name || "—";
-  }
-
-  function getPersonBorderColor(uid) {
-    const idx = getPersonIndex(uid);
-    return PERSON_BORDER_COLORS[idx % PERSON_BORDER_COLORS.length] || "border-l-stone-400";
-  }
-
-  function getPersonNameColor(uid) {
-    const idx = getPersonIndex(uid);
-    return PERSON_NAME_COLORS[idx % PERSON_NAME_COLORS.length] || "text-stone-600";
   }
 
   async function handleAdd() {
@@ -231,21 +221,21 @@ function TeamCalendar({ currentUser, allProfiles, onToast }) {
     <>
       <div className="bg-white border border-stone-200 rounded-3xl overflow-hidden shadow-sm">
         {/* 月份導航 */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-stone-100 bg-amber-50/50">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-stone-100 bg-stone-50">
           <button onClick={() => { if(calMonth===0){setCalMonth(11);setCalYear(y=>y-1);}else setCalMonth(m=>m-1);}}
-            className="w-10 h-10 flex items-center justify-center rounded-xl text-stone-400 hover:bg-amber-100 hover:text-stone-700 transition">
+            className="w-10 h-10 flex items-center justify-center rounded-xl text-stone-400 hover:bg-stone-200 hover:text-stone-700 transition">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/></svg>
           </button>
           <span className="font-bold text-stone-700 text-lg">{calYear} 年 {MONTH_NAMES[calMonth]}</span>
           <button onClick={() => { if(calMonth===11){setCalMonth(0);setCalYear(y=>y+1);}else setCalMonth(m=>m+1);}}
-            className="w-10 h-10 flex items-center justify-center rounded-xl text-stone-400 hover:bg-amber-100 hover:text-stone-700 transition">
+            className="w-10 h-10 flex items-center justify-center rounded-xl text-stone-400 hover:bg-stone-200 hover:text-stone-700 transition">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
           </button>
         </div>
 
         {/* 日曆格 */}
         <div className="p-3">
-          <div className="grid grid-cols-7 mb-1">
+          <div className="grid grid-cols-7 mb-2">
             {["一","二","三","四","五","六","日"].map(w => (
               <div key={w} className="text-center text-xs font-semibold text-stone-400 py-1">{w}</div>
             ))}
@@ -259,19 +249,22 @@ function TeamCalendar({ currentUser, allProfiles, onToast }) {
               const isToday = localDate(today) === ds;
               return (
                 <button key={day} onClick={() => setModalDate(ds)}
-                  className={`min-h-[72px] rounded-2xl p-1.5 text-left border transition-all hover:border-amber-300 hover:bg-amber-50 ${isToday ? "border-amber-400 bg-amber-50" : "border-stone-100 bg-stone-50/50"}`}>
-                  <span className={`block text-xs font-bold mb-1 ${isToday ? "text-amber-600" : "text-stone-500"}`}>{day}</span>
+                  className={`min-h-[76px] rounded-2xl p-1.5 text-left border transition-all hover:border-amber-300 hover:bg-amber-50/50 ${isToday ? "border-amber-400 bg-amber-50" : "border-stone-100 bg-white"}`}>
+                  <span className={`block text-xs font-bold mb-1 ${isToday ? "text-amber-600" : "text-stone-400"}`}>{day}</span>
                   <div className="space-y-0.5">
                     {entries.slice(0,2).map(e => {
-                      const c = VISIT_COLORS[e.visit_type] || VISIT_COLORS["親訪"];
-                      const borderColor = getPersonBorderColor(e.user_id);
+                      const theme = getPersonTheme(e.user_id);
+                      const icon = VISIT_ICON[e.visit_type] || "📋";
                       return (
-                        <div key={e.id} className={`text-[10px] ${c.bg} ${c.text} rounded-r-md border-l-2 ${borderColor} px-1 py-0.5 truncate font-medium`}>
-                          {getAgentName(e.user_id)}｜{e.client_name}
+                        <div key={e.id} className={`text-[10px] ${theme.bg} ${theme.text} rounded-lg px-1.5 py-0.5 truncate font-semibold flex items-center gap-0.5`}>
+                          <span>{icon}</span>
+                          <span className="truncate">{e.client_name}</span>
                         </div>
                       );
                     })}
-                    {entries.length > 2 && <div className="text-[10px] text-stone-400">+{entries.length-2}</div>}
+                    {entries.length > 2 && (
+                      <div className="text-[10px] text-stone-400 font-medium pl-1">+{entries.length-2} 更多</div>
+                    )}
                   </div>
                 </button>
               );
@@ -279,32 +272,30 @@ function TeamCalendar({ currentUser, allProfiles, onToast }) {
           </div>
         </div>
 
-        {/* 圖例：訪種 + 人員 */}
-        <div className="px-5 pb-4 border-t border-stone-100 pt-3 space-y-2">
-          <div className="flex gap-4 flex-wrap">
-            <span className="text-xs font-semibold text-stone-400 uppercase tracking-widest">訪種</span>
-            {VISIT_TYPES.map(t => {
-              const c = VISIT_COLORS[t];
+        {/* 圖例 */}
+        <div className="px-5 pb-4 border-t border-stone-100 pt-3 space-y-2.5">
+          {/* 人員圖例 */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="text-xs font-bold text-stone-400 uppercase tracking-widest w-8">人員</span>
+            {allProfiles.map((p, idx) => {
+              const theme = PERSON_THEMES[idx % PERSON_THEMES.length];
               return (
-                <div key={t} className="flex items-center gap-1.5">
-                  <span className={`w-2.5 h-2.5 rounded-full ${c.dot}`}/>
-                  <span className="text-xs text-stone-500">{t}</span>
+                <div key={p.id} className="flex items-center gap-1.5">
+                  <span className={`w-3 h-3 rounded ${theme.bg}`}/>
+                  <span className={`text-xs font-semibold ${theme.name}`}>{p.name}</span>
                 </div>
               );
             })}
           </div>
-          <div className="flex gap-4 flex-wrap">
-            <span className="text-xs font-semibold text-stone-400 uppercase tracking-widest">人員</span>
-            {allProfiles.map((p, idx) => {
-              const borderColor = PERSON_BORDER_COLORS[idx % PERSON_BORDER_COLORS.length];
-              const nameColor = PERSON_NAME_COLORS[idx % PERSON_NAME_COLORS.length];
-              return (
-                <div key={p.id} className="flex items-center gap-1.5">
-                  <span className={`w-2.5 h-3 rounded-sm border-l-4 bg-stone-100 ${borderColor}`}/>
-                  <span className={`text-xs font-semibold ${nameColor}`}>{p.name}</span>
-                </div>
-              );
-            })}
+          {/* 訪種圖例 */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="text-xs font-bold text-stone-400 uppercase tracking-widest w-8">訪種</span>
+            {VISIT_TYPES.map(t => (
+              <div key={t} className="flex items-center gap-1">
+                <span className="text-sm">{VISIT_ICON[t]}</span>
+                <span className="text-xs text-stone-500">{t}</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -317,54 +308,60 @@ function TeamCalendar({ currentUser, allProfiles, onToast }) {
               <div className="space-y-2">
                 <p className="text-xs text-stone-400 font-semibold uppercase tracking-widest">當日行程</p>
                 {(actByDate[modalDate]||[]).map(e => {
-                  const c = VISIT_COLORS[e.visit_type];
+                  const theme = getPersonTheme(e.user_id);
+                  const vc = VISIT_COLORS[e.visit_type];
                   const isMe = e.user_id === currentUser.id;
                   const isEditing = editingEntry?.id === e.id;
-                  const nameColor = getPersonNameColor(e.user_id);
-                  const borderColor = getPersonBorderColor(e.user_id);
                   return (
-                    <div key={e.id} className={`${c.card} border rounded-2xl px-4 py-3 border-l-4 ${borderColor}`}>
-                      {isEditing ? (
-                        <div className="space-y-3">
-                          <Field label="客戶姓名"><input type="text" value={editingEntry.client_name} onChange={ev => setEditingEntry(p=>({...p,client_name:ev.target.value}))} className={inputCls()} /></Field>
-                          <Field label="拜訪類型"><select value={editingEntry.visit_type} onChange={ev => setEditingEntry(p=>({...p,visit_type:ev.target.value}))} className={inputCls()}>{VISIT_TYPES.map(t=><option key={t}>{t}</option>)}</select></Field>
-                          <Field label="議題"><input type="text" value={editingEntry.topic} onChange={ev => setEditingEntry(p=>({...p,topic:ev.target.value}))} className={inputCls()} /></Field>
-                          <div className="flex gap-2">
-                            <button onClick={() => setEditingEntry(null)} className="flex-1 py-2.5 rounded-xl bg-stone-100 text-stone-600 font-semibold text-sm">取消</button>
-                            <button onClick={handleSaveEdit} disabled={aSaving} className="flex-1 py-2.5 rounded-xl bg-amber-400 text-white font-semibold text-sm disabled:opacity-50">
-                              {aSaving ? <span className="flex items-center justify-center gap-1"><Spinner/>儲存中</span> : "儲存"}
+                    <div key={e.id} className={`rounded-2xl overflow-hidden border ${vc.card}`}>
+                      {/* 人員色條 header */}
+                      <div className={`${theme.bg} px-4 py-2 flex items-center justify-between`}>
+                        <div className="flex items-center gap-2">
+                          <span className="text-white font-bold text-sm">{getAgentName(e.user_id)}{isMe ? "（我）" : ""}</span>
+                          <span className="text-white/80 text-xs">{VISIT_ICON[e.visit_type]} {e.visit_type}</span>
+                        </div>
+                        {isMe && !isEditing && (
+                          <div className="flex gap-1">
+                            <button onClick={() => setEditingEntry({...e, topic: e.notes||""})}
+                              className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/20 hover:bg-white/40 text-white transition">
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                            </button>
+                            <button onClick={() => setConfirmDelete(e)}
+                              className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/20 hover:bg-red-400/60 text-white transition">
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                             </button>
                           </div>
-                        </div>
-                      ) : (
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className={`w-2 h-2 rounded-full ${c.dot}`}/>
-                              <span className={`text-sm font-bold ${nameColor}`}>{getAgentName(e.user_id)}{isMe?"（我）":""}</span>
-                              <span className={`text-xs ${c.text} opacity-70`}>{e.visit_type}</span>
+                        )}
+                      </div>
+                      {/* 內容 */}
+                      <div className="px-4 py-3">
+                        {isEditing ? (
+                          <div className="space-y-3">
+                            <Field label="客戶姓名"><input type="text" value={editingEntry.client_name} onChange={ev => setEditingEntry(p=>({...p,client_name:ev.target.value}))} className={inputCls()} /></Field>
+                            <Field label="拜訪類型"><select value={editingEntry.visit_type} onChange={ev => setEditingEntry(p=>({...p,visit_type:ev.target.value}))} className={inputCls()}>{VISIT_TYPES.map(t=><option key={t}>{t}</option>)}</select></Field>
+                            <Field label="議題"><input type="text" value={editingEntry.topic} onChange={ev => setEditingEntry(p=>({...p,topic:ev.target.value}))} className={inputCls()} /></Field>
+                            <div className="flex gap-2">
+                              <button onClick={() => setEditingEntry(null)} className="flex-1 py-2.5 rounded-xl bg-stone-100 text-stone-600 font-semibold text-sm">取消</button>
+                              <button onClick={handleSaveEdit} disabled={aSaving} className="flex-1 py-2.5 rounded-xl bg-amber-400 text-white font-semibold text-sm disabled:opacity-50">
+                                {aSaving ? <span className="flex items-center justify-center gap-1"><Spinner/>儲存中</span> : "儲存"}
+                              </button>
                             </div>
-                            <p className="text-base text-stone-700 font-semibold pl-4">{e.client_name}</p>
-                            {e.notes && <p className="text-sm text-stone-500 pl-4 mt-0.5">議題：{e.notes}</p>}
                           </div>
-                          {isMe && (
-                            <div className="flex gap-1 ml-2">
-                              <button onClick={() => setEditingEntry({...e, topic: e.notes||""})} className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/70 text-stone-400 hover:text-amber-600 hover:bg-amber-50 transition border border-stone-200">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                              </button>
-                              <button onClick={() => setConfirmDelete(e)} className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/70 text-stone-400 hover:text-red-500 hover:bg-red-50 transition border border-stone-200">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      )}
+                        ) : (
+                          <div>
+                            <p className="text-base font-bold text-stone-800">{e.client_name}</p>
+                            {e.notes && <p className="text-sm text-stone-500 mt-0.5">議題：{e.notes}</p>}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
               </div>
             )}
-            <div className="border-t border-stone-200 pt-4 space-y-3">
+
+            {/* 新增 */}
+            <div className="border-t border-stone-100 pt-4 space-y-3">
               <p className="text-xs text-stone-400 font-semibold uppercase tracking-widest">新增我的拜訪</p>
               <Field label="客戶姓名 *"><input type="text" value={aForm.client_name} onChange={e=>setAForm(p=>({...p,client_name:e.target.value}))} placeholder="王小明" className={inputCls()} /></Field>
               <Field label="拜訪類型"><select value={aForm.visit_type} onChange={e=>setAForm(p=>({...p,visit_type:e.target.value}))} className={inputCls()}>{VISIT_TYPES.map(t=><option key={t}>{t}</option>)}</select></Field>
@@ -436,7 +433,14 @@ function SalesModule({ user, allProfiles, isManager, onToast }) {
   }
 
   const pending = sales.filter(s => s.status === "pending");
-  const agentName = (uid) => allProfiles.find(p => p.id === uid)?.name || "—";
+
+  function getPersonTheme(uid) {
+    const idx = allProfiles.findIndex(p => p.id === uid);
+    return PERSON_THEMES[idx % PERSON_THEMES.length] || PERSON_THEMES[0];
+  }
+
+  function agentName(uid) { return allProfiles.find(p => p.id === uid)?.name || "—"; }
+
   const statusBadge = (s) => s.status === "confirmed"
     ? <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-100 text-emerald-700">已核實</span>
     : <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-100 text-amber-700">待核實</span>;
@@ -470,7 +474,7 @@ function SalesModule({ user, allProfiles, isManager, onToast }) {
             <Field label="險種"><input type="text" value={form.product_name} onChange={e=>setForm(p=>({...p,product_name:e.target.value}))} placeholder="終身壽險、醫療險..." className={inputCls()} /></Field>
             <Field label="受理業績 (元) *"><input type="number" value={form.accepted_amount} onChange={e=>setForm(p=>({...p,accepted_amount:e.target.value}))} placeholder="0" min="0" className={inputCls()} /></Field>
             <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-700">
-              送出後 status 自動設為「待核實」，至待核實清單可轉換。
+              送出後自動設為「待核實」，至待核實清單可轉換。
             </div>
             <button type="submit" disabled={saving}
               className="w-full py-4 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-white font-bold text-base shadow-md disabled:opacity-50">
@@ -482,48 +486,40 @@ function SalesModule({ user, allProfiles, isManager, onToast }) {
 
       {activeTab === "pending" && (
         <div className="bg-white border border-stone-200 rounded-3xl overflow-hidden shadow-sm">
-          <div className="px-5 py-4 border-b border-stone-100 bg-amber-50/50 flex items-center justify-between">
+          <div className="px-5 py-4 border-b border-stone-100 bg-stone-50 flex items-center justify-between">
             <h3 className="font-bold text-stone-700 flex items-center gap-2"><span>⏳</span> 待核實清單</h3>
             <span className="text-sm text-amber-600 font-semibold">{pending.length} 筆</span>
           </div>
           {pending.length === 0 ? (
             <div className="py-12 text-center text-stone-400 text-sm">目前沒有待核實的案件 🎉</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-stone-100">
-                <thead className="bg-stone-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-stone-400 uppercase w-[15%]">日期</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-stone-400 uppercase w-[20%]">業務員</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-stone-400 uppercase w-[22%]">客戶</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-stone-400 uppercase w-[18%]">受理金額</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-stone-400 uppercase w-[25%]">操作</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-stone-100">
-                  {pending.map(s => {
-                    const idx = allProfiles.findIndex(p => p.id === s.user_id);
-                    const nameColor = PERSON_NAME_COLORS[idx % PERSON_NAME_COLORS.length] || "text-stone-700";
-                    return (
-                      <tr key={s.id} className="hover:bg-amber-50/40 transition">
-                        <td className="px-4 py-4 text-sm text-stone-500">{s.date}</td>
-                        <td className={`px-4 py-4 text-sm font-bold ${nameColor}`}>{agentName(s.user_id)}</td>
-                        <td className="px-4 py-4">
-                          <p className="text-sm font-semibold text-stone-700">{s.client_name}</p>
+            <div className="divide-y divide-stone-100">
+              {pending.map(s => {
+                const theme = getPersonTheme(s.user_id);
+                return (
+                  <div key={s.id} className="p-4 hover:bg-stone-50 transition">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3 flex-1 min-w-0">
+                        <span className={`${theme.bg} ${theme.text} text-xs font-bold px-2.5 py-1 rounded-lg flex-shrink-0`}>
+                          {agentName(s.user_id)}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-stone-800">{s.client_name}</p>
                           {s.product_name && <p className="text-xs text-stone-400">{s.product_name}</p>}
-                        </td>
-                        <td className="px-4 py-4 text-sm font-bold text-amber-600">${fmtMoney(s.accepted_amount)}</td>
-                        <td className="px-4 py-4">
-                          <button onClick={() => { setConfirmModal(s); setConfirmAmount(String(s.accepted_amount)); }}
-                            className="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-sm transition shadow-sm">
-                            核實 ✓
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                          <p className="text-xs text-stone-400 mt-0.5">{s.date}</p>
+                        </div>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <p className="text-base font-bold text-amber-600">${fmtMoney(s.accepted_amount)}</p>
+                        <button onClick={() => { setConfirmModal(s); setConfirmAmount(String(s.accepted_amount)); }}
+                          className="mt-1.5 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-sm transition shadow-sm">
+                          核實 ✓
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -531,47 +527,38 @@ function SalesModule({ user, allProfiles, isManager, onToast }) {
 
       {activeTab === "all" && (
         <div className="bg-white border border-stone-200 rounded-3xl overflow-hidden shadow-sm">
-          <div className="px-5 py-4 border-b border-stone-100 bg-stone-50/50 flex items-center justify-between">
+          <div className="px-5 py-4 border-b border-stone-100 bg-stone-50 flex items-center justify-between">
             <h3 className="font-bold text-stone-700 flex items-center gap-2"><span>📋</span> 全部業績紀錄</h3>
             <span className="text-sm text-stone-400">{sales.length} 筆</span>
           </div>
           {sales.length === 0 ? (
             <div className="py-12 text-center text-stone-400 text-sm">尚無業績紀錄</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-stone-100">
-                <thead className="bg-stone-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-stone-400 uppercase w-[13%]">日期</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-stone-400 uppercase w-[15%]">業務員</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-stone-400 uppercase w-[22%]">客戶／險種</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-stone-400 uppercase w-[17%]">受理</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-stone-400 uppercase w-[17%]">核實</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-stone-400 uppercase w-[16%]">狀態</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-stone-100">
-                  {sales.map(s => {
-                    const idx = allProfiles.findIndex(p => p.id === s.user_id);
-                    const nameColor = PERSON_NAME_COLORS[idx % PERSON_NAME_COLORS.length] || "text-stone-700";
-                    return (
-                      <tr key={s.id} className="hover:bg-stone-50 transition">
-                        <td className="px-4 py-4 text-xs text-stone-500">{s.date}</td>
-                        <td className={`px-4 py-4 text-sm font-bold ${nameColor}`}>{agentName(s.user_id)}</td>
-                        <td className="px-4 py-4">
-                          <p className="text-sm font-semibold text-stone-700">{s.client_name}</p>
+            <div className="divide-y divide-stone-100">
+              {sales.map(s => {
+                const theme = getPersonTheme(s.user_id);
+                return (
+                  <div key={s.id} className="p-4 hover:bg-stone-50 transition">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3 flex-1 min-w-0">
+                        <span className={`${theme.bg} ${theme.text} text-xs font-bold px-2.5 py-1 rounded-lg flex-shrink-0`}>
+                          {agentName(s.user_id)}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-stone-800">{s.client_name}</p>
                           {s.product_name && <p className="text-xs text-stone-400">{s.product_name}</p>}
-                        </td>
-                        <td className="px-4 py-4 text-sm font-bold text-amber-600">${fmtMoney(s.accepted_amount)}</td>
-                        <td className="px-4 py-4 text-sm font-bold text-emerald-600">
-                          {s.status === "confirmed" ? `$${fmtMoney(s.confirmed_amount)}` : "—"}
-                        </td>
-                        <td className="px-4 py-4">{statusBadge(s)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                          <p className="text-xs text-stone-400 mt-0.5">{s.date}</p>
+                        </div>
+                      </div>
+                      <div className="text-right flex-shrink-0 space-y-1">
+                        <p className="text-sm font-bold text-amber-600">受 ${fmtMoney(s.accepted_amount)}</p>
+                        {s.status === "confirmed" && <p className="text-sm font-bold text-emerald-600">核 ${fmtMoney(s.confirmed_amount)}</p>}
+                        {statusBadge(s)}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -682,9 +669,9 @@ function Dashboard({ allProfiles, onToast }) {
             <SectionTitle icon="📊" title="活動量看板" />
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <StatCard label="總活動量" value={Object.values(actStats).reduce((a,b)=>a+b,0)} sub="次" accent="amber" />
-              <StatCard label="親訪" value={actStats["親訪"]} sub="次" accent="sky" />
-              <StatCard label="跨售訪" value={actStats["跨售訪"]} sub="次" accent="violet" />
-              <StatCard label="議題訪" value={actStats["議題訪"]} sub="次" accent="amber" />
+              <StatCard label="親訪 👁" value={actStats["親訪"]} sub="次" accent="sky" />
+              <StatCard label="跨售訪 🤝" value={actStats["跨售訪"]} sub="次" accent="violet" />
+              <StatCard label="議題訪 💡" value={actStats["議題訪"]} sub="次" accent="amber" />
             </div>
           </section>
 
@@ -702,23 +689,30 @@ function Dashboard({ allProfiles, onToast }) {
               <SectionTitle icon="👥" title="個人明細" />
               <div className="space-y-3">
                 {agentBreakdown.map(([uid, data], idx) => {
-                  const nameColor = PERSON_NAME_COLORS[idx % PERSON_NAME_COLORS.length] || "text-stone-700";
-                  const borderColor = PERSON_BORDER_COLORS[idx % PERSON_BORDER_COLORS.length] || "border-l-stone-400";
+                  const theme = PERSON_THEMES[idx % PERSON_THEMES.length];
                   return (
-                    <div key={uid} className={`bg-white border border-stone-200 rounded-3xl p-5 shadow-sm border-l-4 ${borderColor}`}>
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 to-orange-400 flex items-center justify-center text-white font-bold text-sm">{data.name[0]}</div>
-                        <span className={`font-bold text-lg ${nameColor}`}>{data.name}</span>
+                    <div key={uid} className="bg-white border border-stone-200 rounded-3xl overflow-hidden shadow-sm">
+                      <div className={`${theme.bg} px-5 py-3 flex items-center gap-3`}>
+                        <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center text-white font-bold text-sm">{data.name[0]}</div>
+                        <span className="font-bold text-white text-base">{data.name}</span>
                       </div>
-                      <div className="grid grid-cols-3 gap-2 mb-3">
-                        {VISIT_TYPES.map(t => {
-                          const c = VISIT_COLORS[t];
-                          return <div key={t} className={`${c.bg} rounded-xl p-3 text-center`}><p className={`text-xl font-bold ${c.text}`}>{data.acts[t]}</p><p className={`text-xs ${c.text} opacity-70`}>{t}</p></div>;
-                        })}
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 bg-stone-50 rounded-xl p-3">
-                        <div><span className="text-stone-400 text-xs">受理</span><p className="text-amber-600 font-bold">${fmtMoney(data.accepted)}</p></div>
-                        <div><span className="text-stone-400 text-xs">核實</span><p className="text-emerald-600 font-bold">${fmtMoney(data.confirmed)}</p></div>
+                      <div className="p-4">
+                        <div className="grid grid-cols-3 gap-2 mb-3">
+                          {VISIT_TYPES.map(t => {
+                            const vc = VISIT_COLORS[t];
+                            return (
+                              <div key={t} className={`${vc.bg} rounded-xl p-3 text-center`}>
+                                <p className="text-lg">{VISIT_ICON[t]}</p>
+                                <p className={`text-xl font-bold ${vc.text}`}>{data.acts[t]}</p>
+                                <p className={`text-xs ${vc.text} opacity-70`}>{t}</p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 bg-stone-50 rounded-xl p-3">
+                          <div><span className="text-stone-400 text-xs">受理</span><p className="text-amber-600 font-bold text-base">${fmtMoney(data.accepted)}</p></div>
+                          <div><span className="text-stone-400 text-xs">核實</span><p className="text-emerald-600 font-bold text-base">${fmtMoney(data.confirmed)}</p></div>
+                        </div>
                       </div>
                     </div>
                   );
