@@ -39,19 +39,18 @@ const VISIT_COLORS = {
 
 const PERSON_THEMES = [
   { bg: "bg-indigo-600", text: "text-white", dot: "bg-indigo-600", name: "text-indigo-600", card: "border-l-indigo-600" },
-  { bg: "bg-sky-600",    text: "text-white", dot: "bg-sky-600",    name: "text-sky-600",    card: "border-l-sky-600"    },
+  { bg: "bg-sky-500",    text: "text-white", dot: "bg-sky-500",    name: "text-sky-600",    card: "border-l-sky-500"    },
   { bg: "bg-emerald-600",text: "text-white", dot: "bg-emerald-600",name: "text-emerald-600",card: "border-l-emerald-600"},
   { bg: "bg-pink-500",   text: "text-white", dot: "bg-pink-500",   name: "text-pink-600",   card: "border-l-pink-500"   },
   { bg: "bg-stone-700",  text: "text-white", dot: "bg-stone-700",  name: "text-stone-700",  card: "border-l-stone-700"  },
 ];
 
-// UUID → 固定顏色對應
 const PERSON_COLOR_MAP = {
-  "6aeb544c-ec49-4c45-b10e-ef0d4e9fda1a": PERSON_THEMES[0], // 李偉誠 靛藍
-  "c5947abf-cfaf-4be2-bec5-27159c714237": PERSON_THEMES[1], // 林冠佑 天藍
-  "2fbfc70e-e7f0-47aa-912c-50a543f6947d": PERSON_THEMES[2], // 鍾承修 翠綠
-  "df2a0920-4194-4dcc-9198-bc6193f9ad6a": PERSON_THEMES[3], // 徐雨柔 粉色
-  "a76d66e6-581a-459a-b764-0fabb3102de5": PERSON_THEMES[4], // 郭華益 咖啡棕
+  "6aeb544c-ec49-4c45-b10e-ef0d4e9fda1a": PERSON_THEMES[0],
+  "c5947abf-cfaf-4be2-bec5-27159c714237": PERSON_THEMES[1],
+  "2fbfc70e-e7f0-47aa-912c-50a543f6947d": PERSON_THEMES[2],
+  "df2a0920-4194-4dcc-9198-bc6193f9ad6a": PERSON_THEMES[3],
+  "a76d66e6-581a-459a-b764-0fabb3102de5": PERSON_THEMES[4],
 };
 
 function getPersonTheme(uid) {
@@ -120,9 +119,9 @@ function StatCard({ label, value, sub, accent }) {
   };
   const cls = accents[accent] || accents.sky;
   return (
-    <div className={`${cls} border rounded-2xl p-5 shadow-sm`}>
-      <p className="text-xs font-semibold uppercase tracking-widest mb-2 opacity-60">{label}</p>
-      <p className="text-3xl font-bold">{value}</p>
+    <div className={`${cls} border rounded-2xl p-4 shadow-sm`}>
+      <p className="text-xs font-semibold uppercase tracking-widest mb-1.5 opacity-60">{label}</p>
+      <p className="text-2xl font-bold">{value}</p>
       {sub && <p className="text-xs mt-1 opacity-50">{sub}</p>}
     </div>
   );
@@ -146,6 +145,86 @@ function SectionTitle({ icon, title }) {
     <div className="flex items-center gap-2 mb-3">
       <span className="text-base">{icon}</span>
       <h2 className="font-bold text-stone-600 text-sm uppercase tracking-widest">{title}</h2>
+    </div>
+  );
+}
+
+// ── 個人訪數統計卡 ───────────────────────────────────────────
+function MyStatsCard({ userId }) {
+  const [weekStats, setWeekStats] = useState({ 親訪:0, 跨售訪:0, 議題訪:0 });
+  const [monthStats, setMonthStats] = useState({ 親訪:0, 跨售訪:0, 議題訪:0 });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      const week = getWeekRange();
+      const month = getMonthRange();
+      const [{ data: wd }, { data: md }] = await Promise.all([
+        supabase.from("activities").select("visit_type").eq("user_id", userId).gte("date", week.start).lte("date", week.end),
+        supabase.from("activities").select("visit_type").eq("user_id", userId).gte("date", month.start).lte("date", month.end),
+      ]);
+      const tally = (data) => {
+        const c = { 親訪:0, 跨售訪:0, 議題訪:0 };
+        (data||[]).forEach(r => { if(c[r.visit_type]!==undefined) c[r.visit_type]++; });
+        return c;
+      };
+      setWeekStats(tally(wd));
+      setMonthStats(tally(md));
+      setLoading(false);
+    }
+    load();
+  }, [userId]);
+
+  const weekTotal = Object.values(weekStats).reduce((a,b)=>a+b,0);
+  const monthTotal = Object.values(monthStats).reduce((a,b)=>a+b,0);
+
+  return (
+    <div className="bg-white border border-stone-200 rounded-3xl overflow-hidden shadow-sm">
+      <div className="px-5 py-4 border-b border-stone-100 bg-stone-50">
+        <h3 className="font-bold text-stone-700 flex items-center gap-2"><span>📈</span> 我的訪數統計</h3>
+      </div>
+      {loading ? (
+        <div className="py-8 flex items-center justify-center text-stone-400"><Spinner/><span className="ml-2 text-sm">載入中...</span></div>
+      ) : (
+        <div className="p-4 space-y-5">
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-bold text-stone-600">本週</span>
+              <span className="text-sm font-bold text-amber-600 bg-amber-50 px-3 py-1 rounded-xl">共 {weekTotal} 次</span>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {VISIT_TYPES.map(t => {
+                const vc = VISIT_COLORS[t];
+                return (
+                  <div key={t} className={`${vc.bg} rounded-2xl p-4 text-center`}>
+                    <p className="text-2xl mb-1">{VISIT_ICON[t]}</p>
+                    <p className={`text-3xl font-bold ${vc.text}`}>{weekStats[t]}</p>
+                    <p className={`text-xs ${vc.text} opacity-70 mt-1`}>{t}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <div className="border-t border-stone-100 pt-5">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-bold text-stone-600">本月</span>
+              <span className="text-sm font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-xl">共 {monthTotal} 次</span>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {VISIT_TYPES.map(t => {
+                const vc = VISIT_COLORS[t];
+                return (
+                  <div key={t} className={`${vc.bg} rounded-2xl p-4 text-center`}>
+                    <p className="text-2xl mb-1">{VISIT_ICON[t]}</p>
+                    <p className={`text-3xl font-bold ${vc.text}`}>{monthStats[t]}</p>
+                    <p className={`text-xs ${vc.text} opacity-70 mt-1`}>{t}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -222,22 +301,24 @@ function TeamCalendar({ currentUser, allProfiles, onToast }) {
   return (
     <>
       <div className="bg-white border border-stone-200 rounded-3xl overflow-hidden shadow-sm">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-stone-100 bg-stone-50">
+        {/* 月份導航 */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-stone-100 bg-stone-50">
           <button onClick={() => { if(calMonth===0){setCalMonth(11);setCalYear(y=>y-1);}else setCalMonth(m=>m-1);}}
-            className="w-10 h-10 flex items-center justify-center rounded-xl text-stone-400 hover:bg-stone-200 hover:text-stone-700 transition">
+            className="w-10 h-10 flex items-center justify-center rounded-xl text-stone-400 hover:bg-stone-200 transition">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/></svg>
           </button>
-          <span className="font-bold text-stone-700 text-lg">{calYear} 年 {MONTH_NAMES[calMonth]}</span>
+          <span className="font-bold text-stone-700 text-base">{calYear} 年 {MONTH_NAMES[calMonth]}</span>
           <button onClick={() => { if(calMonth===11){setCalMonth(0);setCalYear(y=>y+1);}else setCalMonth(m=>m+1);}}
-            className="w-10 h-10 flex items-center justify-center rounded-xl text-stone-400 hover:bg-stone-200 hover:text-stone-700 transition">
+            className="w-10 h-10 flex items-center justify-center rounded-xl text-stone-400 hover:bg-stone-200 transition">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
           </button>
         </div>
 
-        <div className="p-3">
-          <div className="grid grid-cols-7 mb-2">
+        {/* 日曆格 */}
+        <div className="p-2">
+          <div className="grid grid-cols-7 mb-1">
             {["一","二","三","四","五","六","日"].map(w => (
-              <div key={w} className="text-center text-xs font-semibold text-stone-400 py-1">{w}</div>
+              <div key={w} className="text-center text-xs font-semibold text-stone-400 py-1.5">{w}</div>
             ))}
           </div>
           <div className="grid grid-cols-7 gap-1">
@@ -249,21 +330,24 @@ function TeamCalendar({ currentUser, allProfiles, onToast }) {
               const isToday = localDate(today) === ds;
               return (
                 <button key={day} onClick={() => setModalDate(ds)}
-                  className={`min-h-[76px] rounded-2xl p-1.5 text-left border transition-all hover:border-amber-300 hover:bg-amber-50/50 ${isToday ? "border-amber-400 bg-amber-50" : "border-stone-100 bg-white"}`}>
-                  <span className={`block text-xs font-bold mb-1 ${isToday ? "text-amber-600" : "text-stone-400"}`}>{day}</span>
+                  className={`min-h-[86px] rounded-xl p-1.5 text-left border transition-all active:scale-95 ${isToday ? "border-amber-400 bg-amber-50" : "border-stone-100 bg-white hover:border-amber-300 hover:bg-amber-50/30"}`}>
+                  {/* 日期數字 */}
+                  <span className={`block text-xs font-bold mb-1 ${isToday ? "text-amber-600" : "text-stone-500"}`}>{day}</span>
+                  {/* 標籤 */}
                   <div className="space-y-0.5">
-                    {entries.slice(0,2).map(e => {
+                    {entries.slice(0,3).map(e => {
                       const theme = getPersonTheme(e.user_id);
                       const icon = VISIT_ICON[e.visit_type] || "📋";
+                      const name = getAgentName(e.user_id);
                       return (
-                        <div key={e.id} className={`text-[10px] ${theme.bg} ${theme.text} rounded-lg px-1.5 py-0.5 truncate font-semibold flex items-center gap-0.5`}>
-                          <span>{icon}</span>
-                          <span className="truncate">{e.client_name}</span>
+                        <div key={e.id} className={`text-[10px] ${theme.bg} ${theme.text} rounded-md px-1 py-0.5 font-bold flex items-center gap-0.5 leading-tight`}>
+                          <span className="flex-shrink-0 text-[9px]">{icon}</span>
+                          <span className="truncate">{name[0]}｜{e.client_name.slice(0,2)}</span>
                         </div>
                       );
                     })}
-                    {entries.length > 2 && (
-                      <div className="text-[10px] text-stone-400 font-medium pl-1">+{entries.length-2}</div>
+                    {entries.length > 3 && (
+                      <div className="text-[10px] text-stone-400 font-medium pl-0.5">+{entries.length-3}</div>
                     )}
                   </div>
                 </button>
@@ -272,24 +356,25 @@ function TeamCalendar({ currentUser, allProfiles, onToast }) {
           </div>
         </div>
 
-        <div className="px-5 pb-4 border-t border-stone-100 pt-3 space-y-2.5">
-          <div className="flex items-center gap-3 flex-wrap">
-            <span className="text-xs font-bold text-stone-400 uppercase tracking-widest w-8">人員</span>
+        {/* 圖例 */}
+        <div className="px-4 pb-4 border-t border-stone-100 pt-3 space-y-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-bold text-stone-400 uppercase tracking-widest">人員</span>
             {allProfiles.map(p => {
               const theme = getPersonTheme(p.id);
               return (
-                <div key={p.id} className="flex items-center gap-1.5">
-                  <span className={`w-3 h-3 rounded ${theme.bg}`}/>
+                <div key={p.id} className="flex items-center gap-1">
+                  <span className={`w-2.5 h-2.5 rounded ${theme.bg}`}/>
                   <span className={`text-xs font-semibold ${theme.name}`}>{p.name}</span>
                 </div>
               );
             })}
           </div>
-          <div className="flex items-center gap-3 flex-wrap">
-            <span className="text-xs font-bold text-stone-400 uppercase tracking-widest w-8">訪種</span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-bold text-stone-400 uppercase tracking-widest">訪種</span>
             {VISIT_TYPES.map(t => (
-              <div key={t} className="flex items-center gap-1">
-                <span className="text-sm">{VISIT_ICON[t]}</span>
+              <div key={t} className="flex items-center gap-0.5">
+                <span className="text-xs">{VISIT_ICON[t]}</span>
                 <span className="text-xs text-stone-500">{t}</span>
               </div>
             ))}
@@ -297,6 +382,7 @@ function TeamCalendar({ currentUser, allProfiles, onToast }) {
         </div>
       </div>
 
+      {/* 日期 Modal */}
       {modalDate && (
         <Modal title={`${modalDate} 的行程`} onClose={() => { setModalDate(null); setEditingEntry(null); setAForm({ client_name: "", visit_type: "親訪", topic: "" }); }}>
           <div className="space-y-4">
@@ -310,7 +396,7 @@ function TeamCalendar({ currentUser, allProfiles, onToast }) {
                   const isEditing = editingEntry?.id === e.id;
                   return (
                     <div key={e.id} className={`rounded-2xl overflow-hidden border ${vc.card}`}>
-                      <div className={`${theme.bg} px-4 py-2 flex items-center justify-between`}>
+                      <div className={`${theme.bg} px-4 py-2.5 flex items-center justify-between`}>
                         <div className="flex items-center gap-2">
                           <span className="text-white font-bold text-sm">{getAgentName(e.user_id)}{isMe ? "（我）" : ""}</span>
                           <span className="text-white/80 text-xs">{VISIT_ICON[e.visit_type]} {e.visit_type}</span>
@@ -318,12 +404,12 @@ function TeamCalendar({ currentUser, allProfiles, onToast }) {
                         {isMe && !isEditing && (
                           <div className="flex gap-1">
                             <button onClick={() => setEditingEntry({...e, topic: e.notes||""})}
-                              className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/20 hover:bg-white/40 text-white transition">
-                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                              className="w-8 h-8 flex items-center justify-center rounded-xl bg-white/20 hover:bg-white/40 text-white transition">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                             </button>
                             <button onClick={() => setConfirmDelete(e)}
-                              className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/20 hover:bg-red-400/60 text-white transition">
-                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                              className="w-8 h-8 flex items-center justify-center rounded-xl bg-white/20 hover:bg-red-400/60 text-white transition">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                             </button>
                           </div>
                         )}
@@ -335,8 +421,8 @@ function TeamCalendar({ currentUser, allProfiles, onToast }) {
                             <Field label="拜訪類型"><select value={editingEntry.visit_type} onChange={ev => setEditingEntry(p=>({...p,visit_type:ev.target.value}))} className={inputCls()}>{VISIT_TYPES.map(t=><option key={t}>{t}</option>)}</select></Field>
                             <Field label="議題"><input type="text" value={editingEntry.topic} onChange={ev => setEditingEntry(p=>({...p,topic:ev.target.value}))} className={inputCls()} /></Field>
                             <div className="flex gap-2">
-                              <button onClick={() => setEditingEntry(null)} className="flex-1 py-2.5 rounded-xl bg-stone-100 text-stone-600 font-semibold text-sm">取消</button>
-                              <button onClick={handleSaveEdit} disabled={aSaving} className="flex-1 py-2.5 rounded-xl bg-amber-400 text-white font-semibold text-sm disabled:opacity-50">
+                              <button onClick={() => setEditingEntry(null)} className="flex-1 py-3 rounded-xl bg-stone-100 text-stone-600 font-semibold text-sm">取消</button>
+                              <button onClick={handleSaveEdit} disabled={aSaving} className="flex-1 py-3 rounded-xl bg-amber-400 text-white font-semibold text-sm disabled:opacity-50">
                                 {aSaving ? <span className="flex items-center justify-center gap-1"><Spinner/>儲存中</span> : "儲存"}
                               </button>
                             </div>
@@ -358,7 +444,7 @@ function TeamCalendar({ currentUser, allProfiles, onToast }) {
               <Field label="客戶姓名 *"><input type="text" value={aForm.client_name} onChange={e=>setAForm(p=>({...p,client_name:e.target.value}))} placeholder="王小明" className={inputCls()} /></Field>
               <Field label="拜訪類型"><select value={aForm.visit_type} onChange={e=>setAForm(p=>({...p,visit_type:e.target.value}))} className={inputCls()}>{VISIT_TYPES.map(t=><option key={t}>{t}</option>)}</select></Field>
               <Field label="議題 *"><input type="text" value={aForm.topic} onChange={e=>setAForm(p=>({...p,topic:e.target.value}))} placeholder="壽險規劃、醫療保障..." className={inputCls()} /></Field>
-              <button onClick={handleAdd} disabled={aSaving} className="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-400 to-orange-400 text-white font-semibold transition disabled:opacity-50">
+              <button onClick={handleAdd} disabled={aSaving} className="w-full py-4 rounded-xl bg-gradient-to-r from-amber-400 to-orange-400 text-white font-semibold transition disabled:opacity-50 text-base">
                 {aSaving ? <span className="flex items-center justify-center gap-2"><Spinner/>儲存中...</span> : "確認新增"}
               </button>
             </div>
@@ -496,7 +582,7 @@ function SalesModule({ user, allProfiles, isManager, onToast }) {
                       <div className="text-right flex-shrink-0">
                         <p className="text-base font-bold text-amber-600">${fmtMoney(s.accepted_amount)}</p>
                         <button onClick={() => { setConfirmModal(s); setConfirmAmount(String(s.accepted_amount)); }}
-                          className="mt-1.5 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-sm transition shadow-sm">
+                          className="mt-1.5 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-sm transition shadow-sm">
                           核實 ✓
                         </button>
                       </div>
@@ -638,7 +724,7 @@ function Dashboard({ allProfiles, onToast }) {
           ))}
         </div>
         <select value={agentFilter} onChange={e => setAgentFilter(e.target.value)}
-          className="bg-white border border-stone-200 text-stone-600 rounded-2xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 shadow-sm min-w-[140px]">
+          className="bg-white border border-stone-200 text-stone-600 rounded-2xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 shadow-sm">
           <option value="all">全團隊綜合</option>
           {allProfiles.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
         </select>
@@ -651,7 +737,7 @@ function Dashboard({ allProfiles, onToast }) {
         <>
           <section>
             <SectionTitle icon="📊" title="活動量看板" />
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <StatCard label="總活動量" value={Object.values(actStats).reduce((a,b)=>a+b,0)} sub="次" accent="amber" />
               <StatCard label="親訪 👁" value={actStats["親訪"]} sub="次" accent="sky" />
               <StatCard label="跨售訪 🤝" value={actStats["跨售訪"]} sub="次" accent="violet" />
@@ -661,7 +747,7 @@ function Dashboard({ allProfiles, onToast }) {
 
           <section>
             <SectionTitle icon="💹" title="業績看板" />
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 gap-3">
               <StatCard label="受理業績總額" value={`$${fmtMoney(salesStats.accepted)}`} sub="含待核實與已核實" accent="orange" />
               <StatCard label="核實業績總額" value={`$${fmtMoney(salesStats.confirmed)}`} sub="僅計 confirmed" accent="emerald" />
               <StatCard label="尚未核實金額" value={`$${fmtMoney(salesStats.gap)}`} sub="受理 - 核實" accent={salesStats.gap > 0 ? "rose" : "emerald"} />
@@ -686,7 +772,7 @@ function Dashboard({ allProfiles, onToast }) {
                             const vc = VISIT_COLORS[t];
                             return (
                               <div key={t} className={`${vc.bg} rounded-xl p-3 text-center`}>
-                                <p className="text-lg">{VISIT_ICON[t]}</p>
+                                <p className="text-base">{VISIT_ICON[t]}</p>
                                 <p className={`text-xl font-bold ${vc.text}`}>{data.acts[t]}</p>
                                 <p className={`text-xs ${vc.text} opacity-70`}>{t}</p>
                               </div>
@@ -694,8 +780,8 @@ function Dashboard({ allProfiles, onToast }) {
                           })}
                         </div>
                         <div className="grid grid-cols-2 gap-2 bg-stone-50 rounded-xl p-3">
-                          <div><span className="text-stone-400 text-xs">受理</span><p className="text-amber-600 font-bold text-base">${fmtMoney(data.accepted)}</p></div>
-                          <div><span className="text-stone-400 text-xs">核實</span><p className="text-emerald-600 font-bold text-base">${fmtMoney(data.confirmed)}</p></div>
+                          <div><span className="text-stone-400 text-xs">受理</span><p className="text-amber-600 font-bold">${fmtMoney(data.accepted)}</p></div>
+                          <div><span className="text-stone-400 text-xs">核實</span><p className="text-emerald-600 font-bold">${fmtMoney(data.confirmed)}</p></div>
                         </div>
                       </div>
                     </div>
@@ -715,16 +801,17 @@ function AgentView({ user, allProfiles, onToast }) {
   const [activeTab, setActiveTab] = useState("calendar");
   return (
     <div className="space-y-5">
-      <div className="flex gap-2 bg-stone-100 rounded-2xl p-1">
-        {[{id:"calendar",label:"📅 行事曆"},{id:"sales",label:"💰 業績"}].map(t => (
+      <div className="flex gap-1.5 bg-stone-100 rounded-2xl p-1">
+        {[{id:"calendar",label:"📅 行事曆"},{id:"sales",label:"💰 業績"},{id:"stats",label:"📈 我的訪數"}].map(t => (
           <button key={t.id} onClick={() => setActiveTab(t.id)}
-            className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${activeTab===t.id ? "bg-white text-stone-800 shadow-sm" : "text-stone-400 hover:text-stone-600"}`}>
+            className={`flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all ${activeTab===t.id ? "bg-white text-stone-800 shadow-sm" : "text-stone-400 hover:text-stone-600"}`}>
             {t.label}
           </button>
         ))}
       </div>
       {activeTab === "calendar" && <TeamCalendar currentUser={user} allProfiles={allProfiles} onToast={onToast} />}
       {activeTab === "sales" && <SalesModule user={user} allProfiles={allProfiles} isManager={false} onToast={onToast} />}
+      {activeTab === "stats" && <MyStatsCard userId={user.id} />}
     </div>
   );
 }
