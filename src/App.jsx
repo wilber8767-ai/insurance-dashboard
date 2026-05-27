@@ -30,26 +30,33 @@ function fmtMoney(n) { return Number(n || 0).toLocaleString("zh-TW"); }
 function getDaysInMonth(y, m) { return new Date(y, m + 1, 0).getDate(); }
 
 const VISIT_TYPES = ["親訪", "跨售訪", "議題訪"];
-
-const VISIT_ICON = {
-  "親訪":   "👁",
-  "跨售訪": "🤝",
-  "議題訪": "💡",
-};
-
+const VISIT_ICON = { "親訪": "👁", "跨售訪": "🤝", "議題訪": "💡" };
 const VISIT_COLORS = {
   "親訪":   { bg: "bg-sky-100",    text: "text-sky-700",    dot: "bg-sky-400",    card: "bg-sky-50 border-sky-200"       },
   "跨售訪": { bg: "bg-violet-100", text: "text-violet-700", dot: "bg-violet-400", card: "bg-violet-50 border-violet-200" },
   "議題訪": { bg: "bg-amber-100",  text: "text-amber-700",  dot: "bg-amber-400",  card: "bg-amber-50 border-amber-200"   },
 };
 
-// 每個人專屬主色（深色背景 + 白字）
 const PERSON_THEMES = [
-  { bg: "bg-indigo-600",  text: "text-white", dot: "bg-indigo-600",  name: "text-indigo-600", card: "border-l-indigo-600"  },
-  { bg: "bg-sky-600",     text: "text-white", dot: "bg-sky-600",     name: "text-sky-600",    card: "border-l-sky-600"     },
-  { bg: "bg-emerald-600", text: "text-white", dot: "bg-emerald-600", name: "text-emerald-600",card: "border-l-emerald-600" },
-  { bg: "bg-violet-600",  text: "text-white", dot: "bg-violet-600",  name: "text-violet-600", card: "border-l-violet-600"  },
+  { bg: "bg-indigo-600", text: "text-white", dot: "bg-indigo-600", name: "text-indigo-600", card: "border-l-indigo-600" },
+  { bg: "bg-sky-600",    text: "text-white", dot: "bg-sky-600",    name: "text-sky-600",    card: "border-l-sky-600"    },
+  { bg: "bg-emerald-600",text: "text-white", dot: "bg-emerald-600",name: "text-emerald-600",card: "border-l-emerald-600"},
+  { bg: "bg-pink-500",   text: "text-white", dot: "bg-pink-500",   name: "text-pink-600",   card: "border-l-pink-500"   },
+  { bg: "bg-stone-700",  text: "text-white", dot: "bg-stone-700",  name: "text-stone-700",  card: "border-l-stone-700"  },
 ];
+
+// UUID → 固定顏色對應
+const PERSON_COLOR_MAP = {
+  "6aeb544c-ec49-4c45-b10e-ef0d4e9fda1a": PERSON_THEMES[0], // 李偉誠 靛藍
+  "c5947abf-cfaf-4be2-bec5-27159c714237": PERSON_THEMES[1], // 林冠佑 天藍
+  "2fbfc70e-e7f0-47aa-912c-50a543f6947d": PERSON_THEMES[2], // 鍾承修 翠綠
+  "df2a0920-4194-4dcc-9198-bc6193f9ad6a": PERSON_THEMES[3], // 徐雨柔 粉色
+  "a76d66e6-581a-459a-b764-0fabb3102de5": PERSON_THEMES[4], // 郭華益 咖啡棕
+};
+
+function getPersonTheme(uid) {
+  return PERSON_COLOR_MAP[uid] || PERSON_THEMES[0];
+}
 
 const MONTH_NAMES = ["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"];
 
@@ -170,11 +177,6 @@ function TeamCalendar({ currentUser, allProfiles, onToast }) {
     return map;
   }, [activities]);
 
-  function getPersonTheme(uid) {
-    const idx = allProfiles.findIndex(p => p.id === uid);
-    return PERSON_THEMES[idx % PERSON_THEMES.length] || PERSON_THEMES[0];
-  }
-
   function getAgentName(uid) {
     return allProfiles.find(p => p.id === uid)?.name || "—";
   }
@@ -220,7 +222,6 @@ function TeamCalendar({ currentUser, allProfiles, onToast }) {
   return (
     <>
       <div className="bg-white border border-stone-200 rounded-3xl overflow-hidden shadow-sm">
-        {/* 月份導航 */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-stone-100 bg-stone-50">
           <button onClick={() => { if(calMonth===0){setCalMonth(11);setCalYear(y=>y-1);}else setCalMonth(m=>m-1);}}
             className="w-10 h-10 flex items-center justify-center rounded-xl text-stone-400 hover:bg-stone-200 hover:text-stone-700 transition">
@@ -233,7 +234,6 @@ function TeamCalendar({ currentUser, allProfiles, onToast }) {
           </button>
         </div>
 
-        {/* 日曆格 */}
         <div className="p-3">
           <div className="grid grid-cols-7 mb-2">
             {["一","二","三","四","五","六","日"].map(w => (
@@ -263,7 +263,7 @@ function TeamCalendar({ currentUser, allProfiles, onToast }) {
                       );
                     })}
                     {entries.length > 2 && (
-                      <div className="text-[10px] text-stone-400 font-medium pl-1">+{entries.length-2} 更多</div>
+                      <div className="text-[10px] text-stone-400 font-medium pl-1">+{entries.length-2}</div>
                     )}
                   </div>
                 </button>
@@ -272,13 +272,11 @@ function TeamCalendar({ currentUser, allProfiles, onToast }) {
           </div>
         </div>
 
-        {/* 圖例 */}
         <div className="px-5 pb-4 border-t border-stone-100 pt-3 space-y-2.5">
-          {/* 人員圖例 */}
           <div className="flex items-center gap-3 flex-wrap">
             <span className="text-xs font-bold text-stone-400 uppercase tracking-widest w-8">人員</span>
-            {allProfiles.map((p, idx) => {
-              const theme = PERSON_THEMES[idx % PERSON_THEMES.length];
+            {allProfiles.map(p => {
+              const theme = getPersonTheme(p.id);
               return (
                 <div key={p.id} className="flex items-center gap-1.5">
                   <span className={`w-3 h-3 rounded ${theme.bg}`}/>
@@ -287,7 +285,6 @@ function TeamCalendar({ currentUser, allProfiles, onToast }) {
               );
             })}
           </div>
-          {/* 訪種圖例 */}
           <div className="flex items-center gap-3 flex-wrap">
             <span className="text-xs font-bold text-stone-400 uppercase tracking-widest w-8">訪種</span>
             {VISIT_TYPES.map(t => (
@@ -300,7 +297,6 @@ function TeamCalendar({ currentUser, allProfiles, onToast }) {
         </div>
       </div>
 
-      {/* 日期 Modal */}
       {modalDate && (
         <Modal title={`${modalDate} 的行程`} onClose={() => { setModalDate(null); setEditingEntry(null); setAForm({ client_name: "", visit_type: "親訪", topic: "" }); }}>
           <div className="space-y-4">
@@ -314,7 +310,6 @@ function TeamCalendar({ currentUser, allProfiles, onToast }) {
                   const isEditing = editingEntry?.id === e.id;
                   return (
                     <div key={e.id} className={`rounded-2xl overflow-hidden border ${vc.card}`}>
-                      {/* 人員色條 header */}
                       <div className={`${theme.bg} px-4 py-2 flex items-center justify-between`}>
                         <div className="flex items-center gap-2">
                           <span className="text-white font-bold text-sm">{getAgentName(e.user_id)}{isMe ? "（我）" : ""}</span>
@@ -333,7 +328,6 @@ function TeamCalendar({ currentUser, allProfiles, onToast }) {
                           </div>
                         )}
                       </div>
-                      {/* 內容 */}
                       <div className="px-4 py-3">
                         {isEditing ? (
                           <div className="space-y-3">
@@ -359,8 +353,6 @@ function TeamCalendar({ currentUser, allProfiles, onToast }) {
                 })}
               </div>
             )}
-
-            {/* 新增 */}
             <div className="border-t border-stone-100 pt-4 space-y-3">
               <p className="text-xs text-stone-400 font-semibold uppercase tracking-widest">新增我的拜訪</p>
               <Field label="客戶姓名 *"><input type="text" value={aForm.client_name} onChange={e=>setAForm(p=>({...p,client_name:e.target.value}))} placeholder="王小明" className={inputCls()} /></Field>
@@ -373,7 +365,6 @@ function TeamCalendar({ currentUser, allProfiles, onToast }) {
           </div>
         </Modal>
       )}
-
       {confirmDelete && <ConfirmDialog message={`確定刪除「${confirmDelete.client_name}」的拜訪？`} onConfirm={handleDelete} onCancel={() => setConfirmDelete(null)} />}
     </>
   );
@@ -433,14 +424,7 @@ function SalesModule({ user, allProfiles, isManager, onToast }) {
   }
 
   const pending = sales.filter(s => s.status === "pending");
-
-  function getPersonTheme(uid) {
-    const idx = allProfiles.findIndex(p => p.id === uid);
-    return PERSON_THEMES[idx % PERSON_THEMES.length] || PERSON_THEMES[0];
-  }
-
   function agentName(uid) { return allProfiles.find(p => p.id === uid)?.name || "—"; }
-
   const statusBadge = (s) => s.status === "confirmed"
     ? <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-100 text-emerald-700">已核實</span>
     : <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-100 text-amber-700">待核實</span>;
@@ -688,8 +672,8 @@ function Dashboard({ allProfiles, onToast }) {
             <section>
               <SectionTitle icon="👥" title="個人明細" />
               <div className="space-y-3">
-                {agentBreakdown.map(([uid, data], idx) => {
-                  const theme = PERSON_THEMES[idx % PERSON_THEMES.length];
+                {agentBreakdown.map(([uid, data]) => {
+                  const theme = getPersonTheme(uid);
                   return (
                     <div key={uid} className="bg-white border border-stone-200 rounded-3xl overflow-hidden shadow-sm">
                       <div className={`${theme.bg} px-5 py-3 flex items-center gap-3`}>
